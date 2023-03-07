@@ -152,7 +152,7 @@ const CustomAppBar = () => {
 
   return (
     <AppBar
-      position="fixed"
+      position="static"
       elevation={0}
       sx={{
         background: "white",
@@ -185,7 +185,6 @@ const CustomAppBar = () => {
       </Toolbar>
 
       <Modal
-        id="v-center"
         isCentered
         hasFooter={false}
         isVisible={showChainModal}
