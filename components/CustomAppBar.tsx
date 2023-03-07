@@ -2,6 +2,7 @@ import { KeyboardArrowDownRounded } from "@mui/icons-material";
 import {
   AppBar,
   Box,
+  Hidden,
   IconButton,
   Stack,
   Toolbar,
@@ -19,21 +20,25 @@ import {
 import { DappConfig } from "@web3uikit/core/dist/lib/ChainSelector/types";
 import { useState } from "react";
 
-const CustomAppBar = () => {
-  const [currentChain, setCurrentChain] = useState<
-    | "polygon"
-    | "ethereum"
-    | "arbitrum"
-    | "fantom"
-    | "avalanche"
-    | "binance"
-    | "cronos"
-    | "coinbase"
-    | "ronin"
-    | "optimism"
-    | "aptos"
-    | "palm"
-  >("ethereum");
+export type Chain =
+  | "polygon"
+  | "ethereum"
+  | "arbitrum"
+  | "fantom"
+  | "avalanche"
+  | "binance"
+  | "cronos"
+  | "coinbase"
+  | "ronin"
+  | "optimism"
+  | "aptos"
+  | "palm";
+
+interface CustomAppBarProps {
+  onSelectChain: (chainId: string, chainName: Chain) => void;
+}
+const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
+  const [currentChain, setCurrentChain] = useState<Chain>("ethereum");
   const [showChainModal, setShowChainModal] = useState(false);
   const [selectedChain, setSelectedChain] = useState<DappConfig[]>([
     {
@@ -116,21 +121,7 @@ const CustomAppBar = () => {
     },
   ];
 
-  const chainIdsToNames = new Map<
-    string,
-    | "polygon"
-    | "ethereum"
-    | "arbitrum"
-    | "fantom"
-    | "avalanche"
-    | "binance"
-    | "cronos"
-    | "coinbase"
-    | "ronin"
-    | "optimism"
-    | "aptos"
-    | "palm"
-  >([
+  const chainIdsToNames = new Map<string, Chain>([
     ["0x89", "polygon"],
     ["0x13881", "polygon"],
     ["0x1", "ethereum"],
@@ -145,9 +136,14 @@ const CustomAppBar = () => {
   ]);
 
   const onChainChanged = (values: DappConfig[]) => {
+    const chainId = values[0].chainId;
+    const chainName = chainIdsToNames.get(chainId)!;
+
     setSelectedChain(values);
     setShowChainModal(false);
-    setCurrentChain(chainIdsToNames.get(values[0].chainId)!);
+    setCurrentChain(chainName);
+
+    onSelectChain(chainId, chainName);
   };
 
   return (
@@ -156,12 +152,17 @@ const CustomAppBar = () => {
       elevation={0}
       sx={{
         background: "white",
-        padding: "10px 40px",
+        padding: { xs: "10px 5px", sm: "10px 20px", md: "10px 40px" },
         borderBottom: "1px solid #e5e5e5",
       }}
     >
       <Toolbar sx={{ width: "100%" }}>
-        <Stack direction="row" alignItems="center" sx={{ width: "100%" }}>
+        <Stack
+          direction={{ xs: "column-reverse", sm: "row" }}
+          alignItems="center"
+          sx={{ width: "100%" }}
+          rowGap="20px"
+        >
           <Typography variant="h5" color="primary" sx={{ fontWeight: "bold" }}>
             NFT Explorer
           </Typography>
@@ -172,7 +173,7 @@ const CustomAppBar = () => {
             sx={{ flexGrow: 1, gap: 2 }}
           >
             <Input label="" placeholder="Enter a valid wallet address here" />
-            <Button text="Fetch NFTs" theme="outline" />
+            <Button text="Fetch" theme="outline" />
           </Stack>
 
           <Tooltip content="Choose Blockchain" position="bottom">

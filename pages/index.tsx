@@ -1,6 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
-import CustomAppBar from "@/components/CustomAppBar";
-import { Box, Grid, Stack, Toolbar, Typography } from "@mui/material";
+import CustomAppBar, { Chain } from "@/components/CustomAppBar";
+import {
+  Box,
+  CircularProgress,
+  Grid,
+  Stack,
+  Toolbar,
+  Typography,
+} from "@mui/material";
 import { Button, Card, Modal, NftCard } from "@web3uikit/core";
 import { useState } from "react";
 
@@ -43,6 +50,7 @@ const NFTCardWrapper = ({
     <Grid
       item
       xs={12}
+      sm={6}
       md={3}
       sx={{
         "& .image": {
@@ -65,19 +73,35 @@ const NFTCardWrapper = ({
 const Index = () => {
   const [selectedNft, setSelectedNft] = useState<any>(null);
   const [nftModalOpen, setNftModalOpen] = useState(false);
-  const [chain, setChain] = useState("ethereum");
+  const [chain, setChain] = useState<Chain>("ethereum");
+  const [chainId, setChainId] = useState("0x1");
+  const [isLoading, setIsLoading] = useState(false);
 
   const onNftSelected = (selected: any) => {
     setSelectedNft(selected);
     setNftModalOpen(true);
   };
 
+  const onSelectChain = (chainId: string, chainName: Chain) => {
+    setChainId(chainId);
+    setChain(chainName);
+  };
+
   return (
-    <div>
-      <CustomAppBar />
+    <div
+      style={{
+        position: "relative",
+        height: "100vh",
+      }}
+    >
+      <CustomAppBar onSelectChain={onSelectChain} />
 
       <Box
-        sx={{ marginTop: "110px", padding: "0 40px", paddingBottom: "40px" }}
+        sx={{
+          marginTop: "40px",
+          padding: "0 40px",
+          paddingBottom: "40px",
+        }}
       >
         <Typography
           variant="h4"
@@ -86,9 +110,23 @@ const Index = () => {
           Discovered NFTs
         </Typography>
 
-        <Grid container justifyContent="center" columnGap="30px">
-          <NFTCardWrapper onSelected={onNftSelected} />
-        </Grid>
+        {!isLoading && (
+          <Grid container justifyContent="center" columnGap="30px">
+            <NFTCardWrapper onSelected={onNftSelected} />
+          </Grid>
+        )}
+
+        {isLoading && (
+          <CircularProgress
+            size="4rem"
+            sx={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translateX(-50%) translateY(-50%)",
+            }}
+          />
+        )}
 
         <Modal
           isVisible={nftModalOpen}
@@ -112,7 +150,7 @@ const Index = () => {
               />
             </Stack>
           }
-          width="600px"
+          width="500px"
         >
           <NftCard chain={chain} moralisApiResult={selectedNft} />
         </Modal>
