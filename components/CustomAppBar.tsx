@@ -1,24 +1,17 @@
 import { KeyboardArrowDownRounded } from "@mui/icons-material";
-import {
-  AppBar,
-  Box,
-  Hidden,
-  IconButton,
-  Stack,
-  Toolbar,
-  Typography,
-} from "@mui/material";
+import { AppBar, IconButton, Stack, Toolbar, Typography } from "@mui/material";
 import {
   Button,
   ChainSelector,
   CryptoLogos,
-  Dropdown,
   Input,
   Modal,
   Tooltip,
+  useNotification,
 } from "@web3uikit/core";
 import { DappConfig } from "@web3uikit/core/dist/lib/ChainSelector/types";
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
+import WAValidator from "multicoin-address-validator";
 
 export type Chain =
   | "polygon"
@@ -36,8 +29,12 @@ export type Chain =
 
 interface CustomAppBarProps {
   onSelectChain: (chainId: string, chainName: Chain) => void;
+  onFetchRequested: (address: string, chainId: string) => void;
 }
-const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
+const CustomAppBar = ({
+  onSelectChain,
+  onFetchRequested,
+}: CustomAppBarProps) => {
   const [currentChain, setCurrentChain] = useState<Chain>("ethereum");
   const [showChainModal, setShowChainModal] = useState(false);
   const [selectedChain, setSelectedChain] = useState<DappConfig[]>([
@@ -45,6 +42,10 @@ const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
       chainId: "0x1",
     },
   ]);
+  const [address, setAddress] = useState<string>("");
+  const [chainSymbol, setChainSymbol] = useState("ETH");
+  const [chainId, setChainId] = useState("0x1");
+  const dispatchNotification = useNotification();
 
   const chainProviders = [
     {
@@ -68,12 +69,6 @@ const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
     {
       chain: "Fantom",
       chainId: "0xfa",
-      name: "Mainnet",
-      network: "mainnet",
-    },
-    {
-      chain: "Cronos",
-      chainId: "0x19",
       name: "Mainnet",
       network: "mainnet",
     },
@@ -113,12 +108,6 @@ const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
       name: "Rinkeby",
       network: "testnet",
     },
-    {
-      chain: "Cronos",
-      chainId: "0x152",
-      name: "Testnet",
-      network: "testnet",
-    },
   ];
 
   const chainIdsToNames = new Map<string, Chain>([
@@ -138,12 +127,63 @@ const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
   const onChainChanged = (values: DappConfig[]) => {
     const chainId = values[0].chainId;
     const chainName = chainIdsToNames.get(chainId)!;
+    let chainSymbol = "ETH";
 
+    switch (chainName) {
+      case "polygon":
+        chainSymbol = "MATIC";
+        break;
+      case "ethereum":
+        chainSymbol = "ETH";
+        break;
+      case "cronos":
+        chainSymbol = "CRO";
+        break;
+      case "binance":
+        chainSymbol = "BNB";
+        break;
+      case "fantom":
+        chainSymbol = "ETH";
+        break;
+    }
+
+    setChainId(chainId);
     setSelectedChain(values);
     setShowChainModal(false);
     setCurrentChain(chainName);
+    setChainSymbol(chainSymbol);
 
     onSelectChain(chainId, chainName);
+
+    onFetch(chainId);
+  };
+
+  const onAddressChanged = (event: ChangeEvent<HTMLInputElement>) => {
+    setAddress(event.target.value);
+  };
+
+  const onFetch = (chainId: string) => {
+    if (!address) {
+      dispatchNotification({
+        type: "error",
+        title: "Oops!",
+        message: "Please enter a wallet address",
+        position: "topR",
+      });
+      return;
+    }
+
+    if (!WAValidator.validate(address, chainSymbol)) {
+      dispatchNotification({
+        type: "error",
+        title: "Oops!",
+        message: `Please enter a valid ${currentChain} wallet address`,
+        position: "topR",
+      });
+      return;
+    }
+
+    onFetchRequested(address, chainId);
   };
 
   return (
@@ -152,7 +192,7 @@ const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
       elevation={0}
       sx={{
         background: "white",
-        padding: { xs: "10px 5px", sm: "10px 20px", md: "10px 40px" },
+        padding: { xs: "10px 10px", sm: "10px 20px", md: "10px 40px" },
         borderBottom: "1px solid #e5e5e5",
       }}
     >
@@ -172,8 +212,16 @@ const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
             justifyContent="center"
             sx={{ flexGrow: 1, gap: 2 }}
           >
-            <Input label="" placeholder="Enter a valid wallet address here" />
-            <Button text="Fetch" theme="outline" />
+            <Input
+              label=""
+              placeholder="Enter a valid wallet address here"
+              onChange={onAddressChanged}
+            />
+            <Button
+              text="Fetch"
+              theme="outline"
+              onClick={() => onFetch(chainId)}
+            />
           </Stack>
 
           <Tooltip content="Choose Blockchain" position="bottom">
@@ -186,12 +234,17 @@ const CustomAppBar = ({ onSelectChain }: CustomAppBarProps) => {
       </Toolbar>
 
       <Modal
-        isCentered
         hasFooter={false}
         isVisible={showChainModal}
         onCloseButtonPressed={() => setShowChainModal(false)}
         title={
-          <Typography color="#68738D" variant="h5">
+          <Typography
+            color="#68738D"
+            variant="h4"
+            sx={{
+              fontSize: { xs: "1.1rem", sm: "2rem" },
+            }}
+          >
             Choose Blockchain
           </Typography>
         }

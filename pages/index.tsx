@@ -1,44 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 import CustomAppBar, { Chain } from "@/components/CustomAppBar";
-import {
-  Box,
-  CircularProgress,
-  Grid,
-  Stack,
-  Toolbar,
-  Typography,
-} from "@mui/material";
-import { Button, Card, Modal, NftCard } from "@web3uikit/core";
+import { Box, CircularProgress, Grid, Stack, Typography } from "@mui/material";
+import { Button, Card, Modal, NftCard, useNotification } from "@web3uikit/core";
 import { useState } from "react";
 
 interface NFTCardWrapperProps {
-  nft?: any;
+  nft: any;
   onSelected: (nft: any) => void;
 }
-
-const NFTCardWrapper = ({
-  onSelected,
-  nft = {
-    amount: "1",
-    block_number: "15957801",
-    block_number_minted: "12346998",
-    contract_type: "ERC721",
-    last_metadata_sync: "2022-10-04T14:50:00.573Z",
-    last_token_uri_sync: "2022-10-04T14:49:59.308Z",
-    metadata:
-      '{"image":"ipfs://QmZcRZu2cMJG9KUSta6WTrRek647WSG5mJZLhimwbC2y56","attributes":[{"trait_type":"Background","value":"Aquamarine"},{"trait_type":"Fur","value":"Pink"},{"trait_type":"Eyes","value":"3d"},{"trait_type":"Mouth","value":"Bored"},{"trait_type":"Clothes","value":"Service"}]}',
-    minter_address: "0x8be13ff71224ad525f0474553aa7f8621b856bd4",
-    name: "BoredApeYachtClub",
-    owner_of: "0x6682f185d982bd341a0e1dfccbc2562e3cb1eea7",
-    symbol: "BAYC",
-    token_address: "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
-    token_hash: "61554743720b60143f35e7adcc2a6fc7",
-    token_id: "4789",
-    token_uri:
-      "https://ipfs.moralis.io:2053/ipfs/QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/4789",
-    transfer_index: [15957801, 92, 206, 0],
-  },
-}: NFTCardWrapperProps) => {
+const NFTCardWrapper = ({ onSelected, nft }: NFTCardWrapperProps) => {
   const parseImageUrl = () => {
     const url = JSON.parse(nft.metadata).image as string;
     if (!url.includes("ipfs")) return url;
@@ -60,8 +30,8 @@ const NFTCardWrapper = ({
       }}
     >
       <Card
-        description={`${nft.name} #${nft.token_id}`}
-        title={`${nft.symbol} (${nft.amount})`}
+        description={`${nft.name} #${nft.token_id}`.substring(0, 20) + "..."}
+        title={`${nft.symbol}`}
         onClick={() => onSelected(nft)}
       >
         <img src={parseImageUrl()} alt="NFT" className="image" />
@@ -76,6 +46,8 @@ const Index = () => {
   const [chain, setChain] = useState<Chain>("ethereum");
   const [chainId, setChainId] = useState("0x1");
   const [isLoading, setIsLoading] = useState(false);
+  const [nfts, setNfts] = useState<any[]>([]);
+  const dispatchNotification = useNotification();
 
   const onNftSelected = (selected: any) => {
     setSelectedNft(selected);
@@ -87,6 +59,46 @@ const Index = () => {
     setChain(chainName);
   };
 
+  const doFetchNfts = async (address: string, chainId: string) => {
+    setIsLoading(true);
+    setNfts([]);
+
+    const onError = () => {
+      dispatchNotification({
+        type: "error",
+        title: "Oops!",
+        message: "Couldn't fetch NFTS",
+        position: "topR",
+      });
+    };
+
+    try {
+      const response = await fetch(
+        `/api/nfts?address=${address}&chain=${chainId}`
+      );
+      setIsLoading(false);
+
+      if (response.status === 200) {
+        const data = (await response.json()).result;
+
+        // Only accept NFTs with valid metadata
+        const validNfts: any[] = [];
+        data.forEach((nft: any) => {
+          if (nft.metadata) {
+            const parsed = JSON.parse(nft.metadata);
+            if (parsed.image) validNfts.push(nft);
+          }
+        });
+        setNfts(validNfts);
+      } else {
+        onError();
+      }
+    } catch (err) {
+      console.log(err);
+      onError();
+    }
+  };
+
   return (
     <div
       style={{
@@ -94,7 +106,10 @@ const Index = () => {
         height: "100vh",
       }}
     >
-      <CustomAppBar onSelectChain={onSelectChain} />
+      <CustomAppBar
+        onSelectChain={onSelectChain}
+        onFetchRequested={doFetchNfts}
+      />
 
       <Box
         sx={{
@@ -110,9 +125,20 @@ const Index = () => {
           Discovered NFTs
         </Typography>
 
-        {!isLoading && (
-          <Grid container justifyContent="center" columnGap="30px">
-            <NFTCardWrapper onSelected={onNftSelected} />
+        {!isLoading && nfts.length !== 0 && (
+          <Grid
+            container
+            justifyContent="center"
+            columnGap="30px"
+            rowGap="30px"
+          >
+            {nfts.map((nft, index) => (
+              <NFTCardWrapper
+                key={index}
+                nft={nft}
+                onSelected={onNftSelected}
+              />
+            ))}
           </Grid>
         )}
 
@@ -126,6 +152,12 @@ const Index = () => {
               transform: "translateX(-50%) translateY(-50%)",
             }}
           />
+        )}
+
+        {!isLoading && nfts.length === 0 && (
+          <Typography variant="h6" sx={{ textAlign: "center" }}>
+            Nothing to show!
+          </Typography>
         )}
 
         <Modal
