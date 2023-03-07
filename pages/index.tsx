@@ -44,7 +44,6 @@ const Index = () => {
   const [selectedNft, setSelectedNft] = useState<any>(null);
   const [nftModalOpen, setNftModalOpen] = useState(false);
   const [chain, setChain] = useState<Chain>("ethereum");
-  const [chainId, setChainId] = useState("0x1");
   const [isLoading, setIsLoading] = useState(false);
   const [nfts, setNfts] = useState<any[]>([]);
   const dispatchNotification = useNotification();
@@ -55,7 +54,6 @@ const Index = () => {
   };
 
   const onSelectChain = (chainId: string, chainName: Chain) => {
-    setChainId(chainId);
     setChain(chainName);
   };
 
